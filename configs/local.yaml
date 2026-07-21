@@ -1,0 +1,27 @@
+# Real bounded local run (Apple Silicon / MPS friendly).
+#
+# This is NOT a smoke test — it trains for a full epoch over a genuine slice of
+# XNLI and should push accuracy well above the 0.33 three-class chance line.
+# The full-scale job (all languages + the 26lang corpus) belongs on the GPU VM
+# via configs/full.yaml; loading ~5.9M XNLI rows + 2.7M 26lang pairs is not
+# practical on MPS.
+#
+# We reuse the language/row-subset mechanism to keep the download + tokenization
+# bounded (3 languages, 4000 train rows each = 12k rows) while running a real
+# optimizer schedule (no max_steps cap, one full epoch).
+smoke_test: true
+smoke_languages: ["en", "de", "zh"]
+smoke_rows_per_lang: 4000
+use_26lang: false
+max_length: 128
+per_device_train_batch_size: 16
+per_device_eval_batch_size: 32
+learning_rate: 2.0e-5
+num_train_epochs: 1
+max_steps: -1
+warmup_ratio: 0.06
+weight_decay: 0.01
+logging_steps: 25
+eval_steps: 250
+save_steps: 250
+output_dir: "outputs/local"

@@ -58,17 +58,37 @@ uv run python scripts/train_trainer.py    --config configs/smoke.yaml --smoke-te
 uv run python scripts/train_accelerate.py --config configs/smoke.yaml --smoke-test
 ```
 
-> **MPS note:** over only 2 steps with fp32 you may see a `nan` loss or a large
-> `eval_loss`. That is an artifact of MPS + a randomly-initialized classifier
-> head over almost no steps — **not** a pipeline bug. Accuracy sits at ~0.33
-> (chance for 3 classes), which is expected before real training. On CUDA with
-> bf16 and real step counts this stabilizes.
+> **Smoke-test note:** over only 2 steps the metrics are meaningless (accuracy
+> ~0.33 = 3-class chance); the smoke test only proves the pipeline runs end to
+> end. Use the "real bounded local run" below to confirm the model actually
+> learns.
 
 Run the test suite (CPU-only, no network):
 
 ```bash
-uv run pytest
+uv run pytest              # full suite
+uv run pytest -m "not slow"  # skip the model-download regression test
 ```
+
+### Real bounded local run (proves it actually learns)
+
+`configs/local.yaml` trains a genuine epoch over a bounded slice of XNLI
+(3 languages × 4000 rows) on the Mac GPU — no `max_steps` cap. This is the
+right way to confirm the pipeline *learns*, not just wires up:
+
+```bash
+uv run python scripts/train_trainer.py --config configs/local.yaml
+```
+
+Reference result on an M4 Pro (~23 min, one epoch): eval accuracy climbs from
+0.333 (3-class chance) to **~0.71** (en 0.74 / de 0.70 / zh 0.68) — cross-lingual
+transfer from English data lifting German and Chinese.
+
+> **Note on precision:** the model is loaded in **float32** on purpose (see
+> `model.py`). The mDeBERTa checkpoint is stored in float16, and transformers v5
+> keeps the checkpoint dtype — but float16 master weights make AdamW's `eps`
+> underflow and produce NaN on the first step. Mixed-precision *compute* (bf16 on
+> CUDA) is configured separately and is unaffected.
 
 ## Full training (GPU VM)
 
@@ -118,5 +138,6 @@ CLI overrides. Unknown YAML keys fail fast with a clear error.
   `max_length` (default 128), or raise `gradient_accumulation_steps`.
 - **Dataset download fails:** run `setup_env.sh --download` on a machine with
   network access to warm the HF cache before training.
-- **`nan` loss locally on MPS:** expected over tiny step counts — see the smoke
-  test note above. Verify on CUDA before treating it as a real problem.
+- **`nan` loss:** if you see this after modifying `model.py`, check the model is
+  loaded in float32 (`dtype=torch.float32`). float16 master weights make AdamW
+  produce NaN on the first optimizer step regardless of learning rate or device.
