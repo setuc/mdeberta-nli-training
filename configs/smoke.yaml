@@ -1,0 +1,12 @@
+# Smoke-test config: tiny run to verify the full pipeline end-to-end.
+# Keys MUST match TrainConfig field names in src/mdeberta_nli/config.py.
+smoke_test: true
+smoke_languages: ["en", "de", "zh"]
+smoke_rows_per_lang: 100
+max_steps: 2
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 8
+logging_steps: 1
+eval_steps: 2
+save_steps: 2
+output_dir: "outputs/smoke"

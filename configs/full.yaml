@@ -1,0 +1,19 @@
+# Full training config for mDeBERTa-v3 NLI fine-tuning.
+# Keys MUST match TrainConfig field names in src/mdeberta_nli/config.py.
+use_xnli: true
+use_26lang: true
+max_length: 128
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 64
+learning_rate: 2.0e-5
+num_train_epochs: 2
+warmup_ratio: 0.06
+weight_decay: 0.01
+gradient_accumulation_steps: 1
+# max_train_samples caps the total number of training rows (out of ~2.7M).
+# Leave as null to train on everything; set to e.g. 200000 for a cheaper first run.
+max_train_samples: null
+output_dir: "outputs/full"
+logging_steps: 50
+eval_steps: 1000
+save_steps: 1000
